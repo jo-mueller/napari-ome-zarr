@@ -405,33 +405,33 @@ class Scene(Spec):
                 else None
             )
 
-            n_extra = len(output_spatial) - len(input_spatial)
-            if n_extra > 0:
+            # ProjectAxis is the only transform that changes dimensionality; a
+            # plain to_affine() on the composed sequence can't represent that
+            # shape change, so route through the expansion helper whenever it's
+            # present - regardless of whether it created spatial dims, a
+            # channel dim, or both (fixes non-square affine when the input has
+            # no channel axis but the output does).
+            transforms = seq.flatten()
+            project_tf = next(
+                (tf for tf in transforms if isinstance(tf, tnd.transforms.ProjectAxis)),
+                None,
+            )
+            if project_tf is not None:
                 affine = _expand_affine_for_projection(seq)
 
-                # Get created axis indices from ProjectAxis, adjusted for channel
-                transforms = seq.flatten()
-                project_tf = next(
-                    (
-                        tf
-                        for tf in transforms
-                        if isinstance(tf, tnd.transforms.ProjectAxis)
-                    ),
-                    None,
-                )
-                # We have two index spaces - full (for data, e.g. CZYX)
-                # vs channel-stripped (e.g., ZYX) for props (scale, axis_labels, units)
-                created_output_idxs_full = project_tf.created if project_tf else []
-
-                # props (scale, units, etc) have channel stripped, so adjust indices
-                # handle insertion before or after channel
-                if output_ch_idx is not None:
-                    created_output_idxs_props = [
-                        idx if idx < output_ch_idx else idx - 1
-                        for idx in created_output_idxs_full
-                    ]
-                else:
-                    created_output_idxs_props = created_output_idxs_full
+            n_extra = len(output_spatial) - len(input_spatial)
+            if n_extra > 0:
+                # indices are in the full output CS space (may include an
+                # inserted channel axis); layer data/props never have channel,
+                # so drop channel entries and shift later ones down by however
+                # many channel entries preceded them.
+                created_output_idxs = []
+                n_channels_seen = 0
+                for i in project_tf.created if project_tf else []:
+                    if output_cs_obj.axes[i].type == "space":
+                        created_output_idxs.append(i - n_channels_seen)
+                    else:
+                        n_channels_seen += 1
 
                 # Insert singleton dimensions in layer data and update props
                 for idx, lyr in enumerate(_layers):
@@ -447,7 +447,7 @@ class Scene(Spec):
                                 "axis_labels": "Unknown",
                                 "units": None,
                             }
-                            for i in created_output_idxs_props
+                            for i in created_output_idxs
                         ],
                     )
 
@@ -456,19 +456,7 @@ class Scene(Spec):
                         k: v for k, v in updated_props.items() if k != "name"
                     }
 
-                    # adjust channel_axis for inserted dimensions
-                    # (full indices incl. channel dimension)
-                    if (
-                        "channel_axis" in layer_props
-                        and layer_props["channel_axis"] is not None
-                    ):
-                        orig_ch = layer_props["channel_axis"]
-                        layer_props["channel_axis"] = orig_ch + sum(
-                            1 for i in created_output_idxs_full if i <= orig_ch
-                        )
-
-                    # insert singleton dimensions in layer data (full indices)
-                    for out_idx in created_output_idxs_full:
+                    for out_idx in created_output_idxs:
                         layer_data = [
                             da.expand_dims(d, axis=out_idx) for d in layer_data
                         ]
@@ -476,7 +464,14 @@ class Scene(Spec):
                     # update layer data tuple
                     _layers[idx] = (layer_data, layer_props, lyr[2])
 
-            # Strip channel row/col from affine if present
+            # _expand_affine_for_projection pads pre-ProjectAxis transforms with an
+            # identity input column for every created output axis, so shapes line up
+            # for composition. If channel was one of those created axes, that pseudo
+            # input column lands at output_ch_idx, not input_ch_index (None, since the
+            # true input has no channel).
+            if project_tf is not None and output_ch_idx in project_tf.created:
+                input_ch_index = output_ch_idx
+
             affine = _strip_channel_from_affine(affine, input_ch_index, output_ch_idx)
 
             for lyr in _layers:
