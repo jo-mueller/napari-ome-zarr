@@ -85,10 +85,7 @@ class TestNapari:
     def assert_layers(self, layers, visible_1, visible_2, path="path_3d"):
         # TODO: check name
 
-        
-        
-
-        #data, metadata, layer_type = self.assert_layer(image)
+        # data, metadata, layer_type = self.assert_layer(image)
         if path == "path_3d":
             assert len(layers) == 4
             image_c1, image_c2, image_c3, label = layers
@@ -324,4 +321,5 @@ class TestPlates:
 
 if __name__ == "__main__":
     import pytest
+
     pytest.main([__file__])
