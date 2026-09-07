@@ -366,10 +366,17 @@ class Scene(Spec):
             )
             if target_coordinate_system is None:
                 raise ValueError("No target_coordinate_system was provided.")
-            seq = scene._graph.get_sequence(
-                input_coordinate_system, target_coordinate_system, full=True
-            )
-            affine = seq.simplify().to_affine().matrix
+            if input_coordinate_system != target_coordinate_system:
+                seq = scene._graph.get_sequence(
+                    input_coordinate_system, target_coordinate_system, full=True
+                )
+                affine = seq.simplify().to_affine().matrix
+            else:
+                # Identity affine if no transformation is needed
+                seq = tnd.TransformSequence(
+                     transforms=[tnd.transforms.Identity(ndim=len(input_cs_obj.axes))]
+                     )
+                affine = np.eye(len(input_cs_obj.axes) + 1)
 
             # Get axes of input and output coordinate systems
             input_cs = scene.get_coordinate_system(*input_coordinate_system)
