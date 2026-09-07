@@ -260,7 +260,7 @@ class Multiscales(Spec):
         if has_channel:
             channel_index = ms.images[0].axes.index("c")
             n_channels = int(ms.images[0].data.shape[channel_index])
-        else: 
+        else:
             channel_index = None
             n_channels = 1
 
@@ -374,8 +374,8 @@ class Scene(Spec):
             else:
                 # Identity affine if no transformation is needed
                 seq = tnd.TransformSequence(
-                     transforms=[tnd.transforms.Identity(ndim=len(input_cs_obj.axes))]
-                     )
+                    transforms=[tnd.transforms.Identity(ndim=len(input_cs_obj.axes))]
+                )
                 affine = np.eye(len(input_cs_obj.axes) + 1)
 
             # Get axes of input and output coordinate systems
