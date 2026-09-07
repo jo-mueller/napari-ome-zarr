@@ -257,24 +257,27 @@ class Multiscales(Spec):
         data = [img.data for img in ms.images]
 
         has_channel = "c" in ms.images[0].axes
-        channel_index = ms.images[0].axes.index("c") if has_channel else None
-
-        # Get image-specific properties
-        # (channel axis removed from scale/units/axis_labels)
-        props = _ome_zarr_ms_to_layer_props(ms, channel_index)
-
-        # Tell napari where the channel axis is
         if has_channel:
-            props["channel_axis"] = channel_index
+            channel_index = ms.images[0].axes.index("c")
+            n_channels = int(ms.images[0].data.shape[channel_index])
+        else: 
+            channel_index = None
+            n_channels = 1
 
-        # Merge channel-specific properties (colormaps, names, visible, contrast_limits)
-        channel_props = _extract_channel_props(ms)
-        if channel_props is not None:
-            props |= channel_props
+        layers: List[LayerData] = []
+        for ch_idx in range(n_channels):
+            data = (
+                [da.take(img.data, ch_idx, axis=channel_index) for img in ms.images]
+                if has_channel
+                else [img.data for img in ms.images]
+            )
 
-        layers: List[LayerData] = [(data, props, "image")]
+            props = _ome_zarr_ms_to_layer_props(ms, channel_index)
+            props["name"] = ms.name
 
-        if ms.labels is not None:
+            layers.extend([(data, props, "image")])
+
+        if hasattr(ms, "labels") and ms.labels is not None:
             for label_key in ms.labels.keys():
                 label_spec = Label(self.group[f"labels/{label_key}"])
                 layers.extend(label_spec.to_layer_data())
