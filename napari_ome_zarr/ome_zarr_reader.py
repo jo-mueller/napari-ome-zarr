@@ -114,7 +114,7 @@ def _expand_affine_for_projection(
     transform_sequence_flat = seq.flatten()
 
     # Find ProjectAxis transform
-    project_idx, project_tf = next(
+    project_axis_idx, project_tf = next(
         (
             (i, tf)
             for i, tf in enumerate(transform_sequence_flat)
@@ -126,7 +126,7 @@ def _expand_affine_for_projection(
         return seq.simplify().to_affine().matrix
 
     created_output_idxs = project_tf.created
-    pre_transforms = list(transform_sequence_flat.transforms[:project_idx]) or [
+    pre_transforms = list(transform_sequence_flat.transforms[:project_axis_idx]) or [
         tnd.transforms.Identity(ndim=project_tf.ndims.source)
     ]
     updated_transforms = []
@@ -146,7 +146,11 @@ def _expand_affine_for_projection(
         updated_transforms.append(tnd.transforms.Affine(single_affine))
 
     # Keep transforms after ProjectAxis as-is
-    updated_transforms.extend(transform_sequence_flat.transforms[project_idx + 1 :])
+    if not isinstance(project_axis_idx, int):
+        raise ValueError("ProjectAxis transform not found in the sequence.")
+    updated_transforms.extend(
+        transform_sequence_flat.transforms[project_axis_idx + 1 :]
+        )
 
     return tnd.TransformSequence(updated_transforms).simplify().to_affine().matrix
 
