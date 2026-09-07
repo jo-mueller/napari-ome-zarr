@@ -107,38 +107,46 @@ def _expand_affine_for_projection(
     Handle affine expansion when ProjectAxis adds dimensions.
 
     Transforms before ProjectAxis need extra columns inserted so matrix
-    multiplication works after the axis projection.
+    multiplication works after the axis projection. If there are none (the
+    sequence starts with ProjectAxis), pad a synthesized Identity instead -
+    padding is needed whenever axes are created, regardless of position.
     """
     transform_sequence_flat = seq.flatten()
 
     # Find ProjectAxis transform
-    project_idx = next(
+    project_idx, project_tf = next(
         (
-            i
+            (i, tf)
             for i, tf in enumerate(transform_sequence_flat)
             if isinstance(tf, tnd.transforms.ProjectAxis)
         ),
-        None,
+        (None, None),
     )
-
-    if project_idx is None or project_idx == 0:
-        seq = tnd.TransformSequence(transform_sequence_flat.transforms[1:])
+    if project_tf is None:
         return seq.simplify().to_affine().matrix
 
-    created_output_idxs = transform_sequence_flat[project_idx].created
+    created_output_idxs = project_tf.created
+    pre_transforms = list(transform_sequence_flat.transforms[:project_idx]) or [
+        tnd.transforms.Identity(ndim=project_tf.ndims.source)
+    ]
     updated_transforms = []
 
     # Expand transforms before ProjectAxis
-    for tf in transform_sequence_flat[:project_idx]:
+    for tf in pre_transforms:
         single_affine = tf.to_affine().matrix
         for output_idx in created_output_idxs:
-            single_affine = np.insert(
-                single_affine, output_idx, np.eye(single_affine.shape[0])[:, 0], axis=1
-            )
+            # Insert a passthrough dim (new output == new input, identity) as
+            # both a column and a row - a column alone leaves cols > rows,
+            # since this transform doesn't yet know about the new axis
+            # ProjectAxis is about to create.
+            single_affine = np.insert(single_affine, output_idx, 0.0, axis=1)
+            row = np.zeros(single_affine.shape[1])
+            row[output_idx] = 1.0
+            single_affine = np.insert(single_affine, output_idx, row, axis=0)
         updated_transforms.append(tnd.transforms.Affine(single_affine))
 
     # Keep transforms after ProjectAxis as-is
-    updated_transforms.extend(transform_sequence_flat[project_idx + 1 :])
+    updated_transforms.extend(transform_sequence_flat.transforms[project_idx + 1 :])
 
     return tnd.TransformSequence(updated_transforms).simplify().to_affine().matrix
 
@@ -421,17 +429,15 @@ class Scene(Spec):
 
             n_extra = len(output_spatial) - len(input_spatial)
             if n_extra > 0:
-                # indices are in the full output CS space (may include an
-                # inserted channel axis); layer data/props never have channel,
-                # so drop channel entries and shift later ones down by however
-                # many channel entries preceded them.
-                created_output_idxs = []
-                n_channels_seen = 0
-                for i in project_tf.created if project_tf else []:
-                    if output_cs_obj.axes[i].type == "space":
-                        created_output_idxs.append(i - n_channels_seen)
-                    else:
-                        n_channels_seen += 1
+                # indices are in the full output CS space (may include a
+                # channel axis, created or pre-existing); layer data/props
+                # never have channel, so drop created channel entries and
+                # shift every space index past the channel position down by 1.
+                created_output_idxs = [
+                    i - 1 if output_ch_idx is not None and output_ch_idx < i else i
+                    for i in (project_tf.created if project_tf else [])
+                    if output_cs_obj.axes[i].type == "space"
+                ]
 
                 # Insert singleton dimensions in layer data and update props
                 for idx, lyr in enumerate(_layers):
@@ -464,11 +470,11 @@ class Scene(Spec):
                     # update layer data tuple
                     _layers[idx] = (layer_data, layer_props, lyr[2])
 
-            # _expand_affine_for_projection pads pre-ProjectAxis transforms with an
-            # identity input column for every created output axis, so shapes line up
-            # for composition. If channel was one of those created axes, that pseudo
-            # input column lands at output_ch_idx, not input_ch_index (None, since the
-            # true input has no channel).
+            # _expand_affine_for_projection always pads a pseudo input column for
+            # every created output axis (synthesizing an Identity pre-transform if
+            # none existed). If channel was one of those created axes, that pseudo
+            # input column lands at output_ch_idx, not input_ch_index (None, since
+            # the true input has no channel).
             if project_tf is not None and output_ch_idx in project_tf.created:
                 input_ch_index = output_ch_idx
 
@@ -476,6 +482,7 @@ class Scene(Spec):
 
             for lyr in _layers:
                 lyr[1]["affine"] = affine
+                lyr[1]["bounding_box_visible"] = True
             layers.extend(_layers)
 
         return layers
