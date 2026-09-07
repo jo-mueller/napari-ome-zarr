@@ -150,7 +150,7 @@ def _expand_affine_for_projection(
         raise ValueError("ProjectAxis transform not found in the sequence.")
     updated_transforms.extend(
         transform_sequence_flat.transforms[project_axis_idx + 1 :]
-        )
+    )
 
     return tnd.TransformSequence(updated_transforms).simplify().to_affine().matrix
 
