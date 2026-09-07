@@ -487,7 +487,6 @@ class Scene(Spec):
 
             for lyr in _layers:
                 lyr[1]["affine"] = affine
-                lyr[1]["bounding_box_visible"] = True
             layers.extend(_layers)
 
         return layers
