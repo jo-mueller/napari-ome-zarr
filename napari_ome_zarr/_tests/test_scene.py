@@ -221,20 +221,26 @@ def test_properties_forwarding(tmp_path, make_napari_viewer):
         assert layer.axis_labels == ("y", "x")
 
     # check that all layers are named appropriately
-    layer_names = [layer.name for layer in viewer.layers]
     for _, ms_image in scene.images.items():
-        assert ms_image.name in layer_names
+        if hasattr(ms_image, "omero") and ms_image.omero is not None:
+            for ch in ms_image.omero.channels:
+                ch_name = f"{ms_image.name}: {ch.label}"
+                assert ch_name in viewer.layers
+        else:
+            assert ms_image.name in viewer.layers
+    
         if hasattr(ms_image, "labels") and ms_image.labels is not None:
             for label_name in ms_image.labels.keys():
-                assert label_name in layer_names
+                assert label_name in viewer.layers
 
     # check that scale values have been correctly forwarded
     # to image AND labels layers
     for _, ms_image in scene.images.items():
-        layer = viewer.layers[ms_image.name]
-        assert np.array_equal(
-            layer.scale, np.asarray(list(ms_image.images[0].scale.values()))
-        )
+        layers = [l for l in viewer.layers if l.name.startswith(ms_image.name)]
+        for layer in layers:
+            assert np.array_equal(
+                layer.scale, np.asarray(list(ms_image.images[0].scale.values()))
+            )
 
         if hasattr(ms_image, "labels") and ms_image.labels is not None:
             for label_name, label_img in ms_image.labels.items():
@@ -250,8 +256,9 @@ def test_properties_forwarding(tmp_path, make_napari_viewer):
         )
         affine = transform.simplify().to_affine().matrix
 
-        layer = viewer.layers[ms_image.name]
-        assert np.array_equal(layer.affine.affine_matrix, affine)
+        layers = [l for l in viewer.layers if l.name.startswith(ms_image.name)]
+        for layer in layers:
+            assert np.array_equal(layer.affine.affine_matrix, affine)
 
         # If no tranform between image and labels space is specified
         # the affine should propagate to the labels layers as well
