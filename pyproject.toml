@@ -28,6 +28,18 @@ dependencies = [
     "transformnd>=0.6.0",
 ]
 
+[dependency-groups]
+test = [
+    "pytest",
+    "pytest-cov",
+    "pytest-xvfb ; sys_platform == 'linux'",
+    "magicgui",
+    "pooch",
+    "pytest-qt",
+    "qtpy",
+    "pyqt5",
+]
+
 [project.entry-points."napari.manifest"]
 napari-ome-zarr = "napari_ome_zarr:napari.yaml"
 
