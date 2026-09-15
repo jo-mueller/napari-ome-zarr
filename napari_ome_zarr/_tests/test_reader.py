@@ -134,7 +134,7 @@ class TestNapari:
         self.assert_layers(layers, True, False)
 
     def test_label(self):
-        filename = str(self.path_3d / "labels" / "astronaut")
+        filename = str(self.path_3d / "labels" / "astronaut_labels")
         layers = napari_get_reader(filename)()
         self.assert_layers(layers, True, False)
 
