@@ -10,6 +10,8 @@ from ome_zarr_models.v06.coordinate_transforms import (
 )
 from skimage import data
 
+from napari_ome_zarr._tests.conftest import count_layers_in_scene
+
 
 def create_overlap_tiles_scene() -> OMEZarrScene:
     """
@@ -168,30 +170,6 @@ def create_YXto_ZYX_scene() -> OMEZarrScene:
     )
 
 
-def _count_layers_in_scene(scene: OMEZarrScene) -> dict:
-    """
-    Browse the images in a scene and sum up how many layers
-    should be created. One channel corresponds to one layer.
-    One label image corresponds to one layer.
-    """
-    n_image_layers: int = 0
-    n_label_layers: int = 0
-    for _, ms_image in scene.images.items():
-        img = ms_image.images[0]
-
-        if "c" in img.axes:
-            ch_axis = "".join(img.axes).find("c")
-            n_channels = int(img.data.shape[ch_axis])
-            n_image_layers += n_channels
-        else:
-            n_image_layers += 1
-
-        if hasattr(ms_image, "labels") and ms_image.labels is not None:
-            n_label_layers += len(ms_image.labels.items())
-
-    return {"image_layers": n_image_layers, "label_layers": n_label_layers}
-
-
 @pytest.mark.parametrize(
     "scene",
     [
@@ -209,7 +187,7 @@ def test_scene_in_napari(scene, tmp_path, make_napari_viewer):
     viewer.open(path=str(tmp_path / "tmp_scene.ome.zarr"), plugin="napari-ome-zarr")
 
     # Check every channel and layer is accounted for
-    n_layers = _count_layers_in_scene(scene)
+    n_layers = count_layers_in_scene(scene)
     assert len(viewer.layers) == n_layers["image_layers"] + n_layers["label_layers"]
 
     # Make sure we have the correct amount of labels and image layers
