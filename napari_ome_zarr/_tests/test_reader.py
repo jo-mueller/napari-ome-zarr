@@ -4,8 +4,8 @@ from pathlib import Path
 import numpy as np
 import pytest
 import zarr
-
 from napari.utils.colormaps import AVAILABLE_COLORMAPS, Colormap
+from ome_zarr import OMEZarrMultiscale
 from ome_zarr.data import astronaut, create_zarr
 from ome_zarr.writer import (
     write_image,
@@ -13,11 +13,11 @@ from ome_zarr.writer import (
     write_plate_metadata,
     write_well_metadata,
 )
-from ome_zarr import OMEZarrMultiscale
 
 from napari_ome_zarr._reader import napari_get_reader
-from napari_ome_zarr.ome_zarr_reader import _match_colors_to_available_colormap
 from napari_ome_zarr._tests.conftest import count_layers_in_image
+from napari_ome_zarr.ome_zarr_reader import _match_colors_to_available_colormap
+
 
 class TestNapari:
     @pytest.fixture(autouse=True)
@@ -81,12 +81,16 @@ class TestNapari:
 
         # Check that colormaps are recognized correctly
         if image.name == "astronaut":
-            assert viewer.layers["astronaut: Red"].colormap == AVAILABLE_COLORMAPS["red"]
-            assert viewer.layers["astronaut: Green"].colormap == AVAILABLE_COLORMAPS["green"]
-            assert viewer.layers["astronaut: Blue"].colormap == AVAILABLE_COLORMAPS["blue"]
-
-        
-
+            assert (
+                viewer.layers["astronaut: Red"].colormap == AVAILABLE_COLORMAPS["red"]
+            )
+            assert (
+                viewer.layers["astronaut: Green"].colormap
+                == AVAILABLE_COLORMAPS["green"]
+            )
+            assert (
+                viewer.layers["astronaut: Blue"].colormap == AVAILABLE_COLORMAPS["blue"]
+            )
 
     @pytest.mark.parametrize("path", ["path_3d", "path_2d"])
     def test_get_reader_with_list(self, path):
@@ -334,6 +338,7 @@ class TestPlates:
 
             tilex = math.ceil(tilex / 2)
             tiley = math.ceil(tiley / 2)
+
 
 if __name__ == "__main__":
     import pytest

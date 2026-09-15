@@ -187,9 +187,7 @@ def _extract_channel_props(
             props["colormap"] = _match_colors_to_available_colormap(cm)
 
         ch_name = ch.get("label", f"channel_{index}")
-        props["name"] = (
-            multiscales.name and f"{multiscales.name}: {ch_name}" or ch_name
-        )
+        props["name"] = multiscales.name and f"{multiscales.name}: {ch_name}" or ch_name
         props["visible"] = ch.get("active", True)
 
         window = ch.get("window", None)
