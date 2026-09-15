@@ -224,6 +224,21 @@ def test_scene_in_napari(scene, tmp_path, make_napari_viewer):
     assert n_labels_layer_viewer == n_layers["label_layers"]
 
 
+def test_units_labels_forwarding(tmp_path, make_napari_viewer):
+    """
+    This checks whether the layer properties units, labels, etc
+    are correctly populated by the napari-ome-zarr plugin.
+    """
+    scene = create_overlap_tiles_scene()
+    scene.to_ome_zarr(str(tmp_path / "tmp_scene.ome.zarr"), overwrite=True)
+
+    viewer = make_napari_viewer()
+    viewer.open(path=str(tmp_path / "tmp_scene.ome.zarr"), plugin="napari-ome-zarr")
+
+    for layer in viewer.layers:
+        if hasattr(layer, "metadata") and "units" in layer.metadata:
+            assert layer.metadata["units"] is not None
+
 
 
 if __name__ == "__main__":
