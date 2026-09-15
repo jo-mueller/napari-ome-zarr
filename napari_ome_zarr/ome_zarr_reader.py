@@ -157,65 +157,53 @@ def _expand_affine_for_projection(
 
 def _extract_channel_props(
     multiscales: OMEZarrMultiscale | OMEZarrLabels,
-) -> Dict[str, Any] | None:
+) -> List[Dict[str, Any]] | None:
     """
-    Helper function to extract channel properties from an OME-Zarr
-    multiscale or label images that would apply per channel
-    (if present).
+    Helper function to extract per-channel properties (colormap, name,
+    visible, contrast_limits) from an OME-Zarr multiscale or label image's
+    omero metadata. Returns one dict per channel, or None if there's no
+    omero metadata.
     """
 
-    props: Dict[str, Any] | None = None
-    if hasattr(multiscales, "omero") and multiscales.omero is not None:
-        omero = multiscales.omero.model_dump()
-        colormaps = []
-        ch_names = []
-        visibles = []
-        contrast_limits: list = []
-        model = omero.get("rdefs", {}).get("model", "unset")
-        greyscale = model == "greyscale"
+    if not (hasattr(multiscales, "omero") and multiscales.omero is not None):
+        return None
 
-        for index, ch in enumerate(omero["channels"]):
-            color = ch.get("color", None)
-            if color is not None:
-                rgb = [(int(color[i : i + 2], 16) / 255) for i in range(0, 6, 2)]
-                if greyscale:
-                    rgb = [1, 1, 1]
-                # colormap is range: black -> rgb color
-                cm = Colormap([[0, 0, 0], rgb])
-                # Try to match colormap to an existing napari colormap
-                cm = _match_colors_to_available_colormap(cm)
-                colormaps.append(cm)
-            ch_name = ch.get("label", f"channel_{index}")
-            ch_names.append(
-                multiscales.name and f"{multiscales.name}: {ch_name}" or ch_name
-            )
-            visibles.append(ch.get("active", True))
+    omero = multiscales.omero.model_dump()
+    model = omero.get("rdefs", {}).get("model", "unset")
+    greyscale = model == "greyscale"
 
-            window = ch.get("window", None)
-            if window is not None:
-                start = window.get("start", None)
-                end = window.get("end", None)
-                if start is not None and end is not None:
-                    # skip if None. Otherwise check no previous skip
-                    if len(contrast_limits) == index:
-                        contrast_limits.append([start, end])
+    channels: List[Dict[str, Any]] = []
+    for index, ch in enumerate(omero["channels"]):
+        props: Dict[str, Any] = {}
 
-        if len(colormaps) == 1:
-            colormaps = colormaps[0]  # type: ignore
-        if len(visibles) == 1:
-            visibles = visibles[0]  # type: ignore
-        if len(contrast_limits) == 1:
-            contrast_limits = contrast_limits[0]  # type: ignore
-        if len(ch_names) == 1:
-            ch_names = ch_names[0]  # type: ignore
-        props = {
-            "colormap": colormaps,
-            "name": ch_names,
-            "visible": visibles,
-            "contrast_limits": contrast_limits,
-        }
+        color = ch.get("color", None)
+        if color is not None:
+            rgb = [(int(color[i : i + 2], 16) / 255) for i in range(0, 6, 2)]
+            if greyscale:
+                rgb = [1, 1, 1]
+            # colormap is range: black -> rgb color
+            cm = Colormap([[0, 0, 0], rgb])
+            # Try to match colormap to an existing napari colormap
+            props["colormap"] = _match_colors_to_available_colormap(cm)
 
-    return props
+        ch_name = ch.get("label", f"channel_{index}")
+        props["name"] = (
+            multiscales.name and f"{multiscales.name}: {ch_name}" or ch_name
+        )
+        props["visible"] = ch.get("active", True)
+
+        window = ch.get("window", None)
+        if window is not None:
+            start = window.get("start", None)
+            end = window.get("end", None)
+            if start is not None and end is not None:
+                props["contrast_limits"] = [start, end]
+
+        props["visible"] = ch.get("active", True)
+
+        channels.append(props)
+
+    return channels
 
 
 class Spec(ABC):
@@ -276,6 +264,8 @@ class Multiscales(Spec):
             channel_index = None
             n_channels = 1
 
+        channel_properties = _extract_channel_props(ms)
+
         layers: List[LayerData] = []
         for ch_idx in range(n_channels):
             data = (
@@ -286,6 +276,8 @@ class Multiscales(Spec):
 
             props = _ome_zarr_ms_to_layer_props(ms, channel_index)
             props["name"] = ms.name
+            if channel_properties is not None:
+                props.update(channel_properties[ch_idx])
 
             layers.extend([(data, props, "image")])
 
