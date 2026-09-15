@@ -1,3 +1,4 @@
+import numpy as np
 import pytest
 from ome_zarr import OMEZarrImage, OMEZarrLabels, OMEZarrMultiscale, OMEZarrScene
 from ome_zarr_models.v06.coordinate_transforms import (
@@ -8,7 +9,6 @@ from ome_zarr_models.v06.coordinate_transforms import (
     Translation,
 )
 from skimage import data
-import numpy as np
 
 
 def create_overlap_tiles_scene() -> OMEZarrScene:
@@ -254,16 +254,22 @@ def test_properties_forwarding(tmp_path, make_napari_viewer):
     # to image AND labels layers
     for _, ms_image in scene.images.items():
         layer = viewer.layers[ms_image.name]
-        assert np.array_equal(layer.scale, np.asarray(list(ms_image.images[0].scale.values())))
+        assert np.array_equal(
+            layer.scale, np.asarray(list(ms_image.images[0].scale.values()))
+        )
 
         if hasattr(ms_image, "labels") and ms_image.labels is not None:
             for label_name, label_img in ms_image.labels.items():
                 layer = viewer.layers[label_name]
-                assert np.array_equal(layer.scale, np.asarray(list(label_img.images[0].scale.values())))
+                assert np.array_equal(
+                    layer.scale, np.asarray(list(label_img.images[0].scale.values()))
+                )
 
     # Check that the affine matrix has been properly set in napari layers
     for _, ms_image in scene.images.items():
-        transform = scene._graph.get_sequence((f"{ms_image.name}", "physical"), ("", "world"))
+        transform = scene._graph.get_sequence(
+            (f"{ms_image.name}", "physical"), ("", "world")
+        )
         affine = transform.simplify().to_affine().matrix
 
         layer = viewer.layers[ms_image.name]
@@ -275,5 +281,7 @@ def test_properties_forwarding(tmp_path, make_napari_viewer):
             for label_name, label_img in ms_image.labels.items():
                 layer = viewer.layers[label_name]
                 assert np.array_equal(layer.affine.affine_matrix, affine)
+
+
 if __name__ == "__main__":
     pytest.main([__file__])
