@@ -4,7 +4,8 @@ from pathlib import Path
 import numpy as np
 import pytest
 import zarr
-from napari.utils.colormaps import AVAILABLE_COLORMAPS, Colormap
+#from napari.utils.colormaps import AVAILABLE_COLORMAPS, Colormap
+from napari.utils.colormaps import Colormap
 from ome_zarr.data import astronaut, create_zarr
 from ome_zarr.writer import (
     write_image,
@@ -317,9 +318,3 @@ class TestPlates:
 
             tilex = math.ceil(tilex / 2)
             tiley = math.ceil(tiley / 2)
-
-
-if __name__ == "__main__":
-    import pytest
-
-    pytest.main([__file__])
