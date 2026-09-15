@@ -8,6 +8,7 @@ from ome_zarr_models.v06.coordinate_transforms import (
     Translation,
 )
 from skimage import data
+import numpy as np
 
 
 def create_overlap_tiles_scene() -> OMEZarrScene:
@@ -40,7 +41,7 @@ def create_overlap_tiles_scene() -> OMEZarrScene:
             oz_binary = OMEZarrImage(
                 data=binary,
                 axes="yx",
-                scale={"y": 1.0, "x": 1.0},
+                scale={"y": 0.5, "x": 0.5},
                 axes_units={"y": "micrometer", "x": "micrometer"},
                 name=f"binary_tile_{y}_{x}",
             )
@@ -52,7 +53,7 @@ def create_overlap_tiles_scene() -> OMEZarrScene:
             oz_image = OMEZarrImage(
                 data=tile,
                 axes="yx",
-                scale={"y": 1.0, "x": 1.0},
+                scale={"y": 0.5, "x": 0.5},
                 axes_units={"y": "micrometer", "x": "micrometer"},
                 name=f"tile_{y}_{x}",
             )
@@ -224,7 +225,7 @@ def test_scene_in_napari(scene, tmp_path, make_napari_viewer):
     assert n_labels_layer_viewer == n_layers["label_layers"]
 
 
-def test_units_labels_forwarding(tmp_path, make_napari_viewer):
+def test_properties_forwarding(tmp_path, make_napari_viewer):
     """
     This checks whether the layer properties units, labels, etc
     are correctly populated by the napari-ome-zarr plugin.
@@ -235,11 +236,42 @@ def test_units_labels_forwarding(tmp_path, make_napari_viewer):
     viewer = make_napari_viewer()
     viewer.open(path=str(tmp_path / "tmp_scene.ome.zarr"), plugin="napari-ome-zarr")
 
+    # Make sure we populated the properties correctly
     for layer in viewer.layers:
-        if hasattr(layer, "metadata") and "units" in layer.metadata:
-            assert layer.metadata["units"] is not None
+        assert layer.units[0] == "micrometer"
+        assert layer.units[1] == "micrometer"
+        assert layer.axis_labels == ("y", "x")
 
+    # check that all layers are named appropriately
+    layer_names = [layer.name for layer in viewer.layers]
+    for _, ms_image in scene.images.items():
+        assert ms_image.name in layer_names
+        if hasattr(ms_image, "labels") and ms_image.labels is not None:
+            for label_name in ms_image.labels.keys():
+                assert label_name in layer_names
 
+    # check that scale values have been correctly forwarded
+    # to image AND labels layers
+    for _, ms_image in scene.images.items():
+        layer = viewer.layers[ms_image.name]
+        assert np.array_equal(layer.scale, np.asarray(list(ms_image.images[0].scale.values())))
 
-if __name__ == "__main__":
-    pytest.main([__file__])
+        if hasattr(ms_image, "labels") and ms_image.labels is not None:
+            for label_name, label_img in ms_image.labels.items():
+                layer = viewer.layers[label_name]
+                assert np.array_equal(layer.scale, np.asarray(list(label_img.images[0].scale.values())))
+
+    # Check that the affine matrix has been properly set in napari layers
+    for _, ms_image in scene.images.items():
+        transform = scene._graph.get_sequence((f"{ms_image.name}", "physical"), ("", "world"))
+        affine = transform.simplify().to_affine().matrix
+
+        layer = viewer.layers[ms_image.name]
+        assert np.array_equal(layer.affine.affine_matrix, affine)
+
+        # If no tranform between image and labels space is specified
+        # the affine should propagate to the labels layers as well
+        if hasattr(ms_image, "labels") and ms_image.labels is not None:
+            for label_name, label_img in ms_image.labels.items():
+                layer = viewer.layers[label_name]
+                assert np.array_equal(layer.affine.affine_matrix, affine)
