@@ -240,6 +240,5 @@ def test_units_labels_forwarding(tmp_path, make_napari_viewer):
             assert layer.metadata["units"] is not None
 
 
-
 if __name__ == "__main__":
     pytest.main([__file__])
