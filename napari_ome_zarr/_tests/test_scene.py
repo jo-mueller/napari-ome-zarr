@@ -237,9 +237,8 @@ def test_properties_forwarding(tmp_path, make_napari_viewer):
     # to image AND labels layers
     for _, ms_image in scene.images.items():
         layers = [
-            layer for layer in viewer.layers
-            if layer.name.startswith(ms_image.name)
-            ]
+            layer for layer in viewer.layers if layer.name.startswith(ms_image.name)
+        ]
         for layer in layers:
             assert np.array_equal(
                 layer.scale, np.asarray(list(ms_image.images[0].scale.values()))
@@ -260,9 +259,8 @@ def test_properties_forwarding(tmp_path, make_napari_viewer):
         affine = transform.simplify().to_affine().matrix
 
         layers = [
-            layer for layer in viewer.layers
-            if layer.name.startswith(ms_image.name)
-            ]
+            layer for layer in viewer.layers if layer.name.startswith(ms_image.name)
+        ]
         for layer in layers:
             assert np.array_equal(layer.affine.affine_matrix, affine)
 
