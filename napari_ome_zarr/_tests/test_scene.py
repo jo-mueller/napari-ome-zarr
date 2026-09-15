@@ -228,7 +228,7 @@ def test_properties_forwarding(tmp_path, make_napari_viewer):
                 assert ch_name in viewer.layers
         else:
             assert ms_image.name in viewer.layers
-    
+
         if hasattr(ms_image, "labels") and ms_image.labels is not None:
             for label_name in ms_image.labels.keys():
                 assert label_name in viewer.layers
