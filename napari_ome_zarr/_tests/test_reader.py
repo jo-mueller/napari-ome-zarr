@@ -5,8 +5,7 @@ import numpy as np
 import pytest
 import zarr
 
-# from napari.utils.colormaps import AVAILABLE_COLORMAPS, Colormap
-from napari.utils.colormaps import Colormap
+from napari.utils.colormaps import AVAILABLE_COLORMAPS, Colormap
 from ome_zarr.data import astronaut, create_zarr
 from ome_zarr.writer import (
     write_image,
@@ -14,10 +13,11 @@ from ome_zarr.writer import (
     write_plate_metadata,
     write_well_metadata,
 )
+from ome_zarr import OMEZarrMultiscale
 
 from napari_ome_zarr._reader import napari_get_reader
 from napari_ome_zarr.ome_zarr_reader import _match_colors_to_available_colormap
-
+from napari_ome_zarr._tests.conftest import count_layers_in_image
 
 class TestNapari:
     @pytest.fixture(autouse=True)
@@ -41,37 +41,52 @@ class TestNapari:
         assert callable(reader)
 
     @pytest.mark.parametrize("path", ["path_3d", "path_2d"])
-    def test_reader(self, path):
+    def test_reader(self, path, make_napari_viewer):
+
+        viewer = make_napari_viewer()
+
         path_str = str(getattr(self, path))
-        reader = napari_get_reader(path_str)
-        results = reader(path_str)
-        if path == "path_3d":
+        viewer.open(path=path_str, plugin="napari-ome-zarr")
 
-            assert len(results) == 4
-            image_c1, image_c2, image_c3, label = results
-            # TODO: Update name check once OMEZarrScene merged
-            # with https://github.com/ome/ome-zarr-py/pull/622
-            # assert image[1]["name"] == ["Red", "Green", "Blue"]
-            # cyx image with c dropped; labels are yx (no channel).
-            assert image_c1[1]["axis_labels"] == ("y", "x")
-            assert image_c2[1]["axis_labels"] == ("y", "x")
-            assert image_c3[1]["axis_labels"] == ("y", "x")
-            assert label[1]["axis_labels"] == ("y", "x")
-            assert "units" not in image_c1[1]
-            assert "units" not in image_c2[1]
-            assert "units" not in image_c3[1]
-            assert "units" not in label[1]
-        else:
-            assert len(results) == 2
-            image, label = results
-            assert "channel_axis" not in image[1]
-            # TODO: Update name check once OMEZarrScene merged
-            # with https://github.com/ome/ome-zarr-py/pull/622
-            # assert image[1]["name"] == "channel_0"
-            assert image[1]["axis_labels"] == ("y", "x")
+        image = OMEZarrMultiscale.from_ome_zarr(path_str)
 
-            # create_zarr() doesn't set per-axis units.
-            assert "units" not in image[1]
+        # Check that we get the correct amount of layers in the viewer
+        n_layers = count_layers_in_image(image)
+        assert len(viewer.layers) == n_layers["image_layers"] + n_layers["label_layers"]
+
+        # check that we have the correct properties in the viewer
+        for layer in viewer.layers:
+            assert layer.axis_labels == ("y", "x")
+            assert layer.units[0] == "pixel"
+            assert layer.units[1] == "pixel"
+
+        # check that all channel properties have been passed through
+        if hasattr(image, "omero") and image.omero is not None:
+            for ch in image.omero.channels:
+                ch_name = f"{image.name}: {ch.label}"
+                assert ch_name in viewer.layers
+
+                # assert channel display settings
+                contrast_limits = [ch.window.start, ch.window.end]
+                assert viewer.layers[ch_name].contrast_limits == contrast_limits
+                assert viewer.layers[ch_name].visible == ch.active
+
+        # check the same for labels
+        if hasattr(image, "labels") and image.labels is not None:
+            for label_key in image.labels.keys():
+                assert label_key in viewer.layers
+
+                # we default labels to not visible here
+                assert viewer.layers[label_key].visible is False
+
+        # Check that colormaps are recognized correctly
+        if image.name == "astronaut":
+            assert viewer.layers["astronaut: Red"].colormap == AVAILABLE_COLORMAPS["red"]
+            assert viewer.layers["astronaut: Green"].colormap == AVAILABLE_COLORMAPS["green"]
+            assert viewer.layers["astronaut: Blue"].colormap == AVAILABLE_COLORMAPS["blue"]
+
+        
+
 
     @pytest.mark.parametrize("path", ["path_3d", "path_2d"])
     def test_get_reader_with_list(self, path):
@@ -319,3 +334,8 @@ class TestPlates:
 
             tilex = math.ceil(tilex / 2)
             tiley = math.ceil(tiley / 2)
+
+if __name__ == "__main__":
+    import pytest
+
+    pytest.main([__file__])
