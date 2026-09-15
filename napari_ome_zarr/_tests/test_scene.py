@@ -1,13 +1,14 @@
-from ome_zarr import OMEZarrImage, OMEZarrMultiscale, OMEZarrScene, OMEZarrLabels
-from ome_zarr_models.v06.coordinate_transforms import (
-    Translation,
-    Sequence,
-    CoordinateSystem,
-    Axis,
-    CoordinateSystemIdentifier
-    )
-from skimage import data
 import pytest
+from ome_zarr import OMEZarrImage, OMEZarrLabels, OMEZarrMultiscale, OMEZarrScene
+from ome_zarr_models.v06.coordinate_transforms import (
+    Axis,
+    CoordinateSystem,
+    CoordinateSystemIdentifier,
+    Sequence,
+    Translation,
+)
+from skimage import data
+
 
 def create_overlap_tiles_scene() -> OMEZarrScene:
     """
@@ -37,7 +38,8 @@ def create_overlap_tiles_scene() -> OMEZarrScene:
             binary = tile > tile.mean()
 
             oz_binary = OMEZarrImage(
-                data=binary, axes="yx",
+                data=binary,
+                axes="yx",
                 scale={"y": 1.0, "x": 1.0},
                 axes_units={"y": "micrometer", "x": "micrometer"},
                 name=f"binary_tile_{y}_{x}",
@@ -48,7 +50,8 @@ def create_overlap_tiles_scene() -> OMEZarrScene:
             )
 
             oz_image = OMEZarrImage(
-                data=tile, axes="yx",
+                data=tile,
+                axes="yx",
                 scale={"y": 1.0, "x": 1.0},
                 axes_units={"y": "micrometer", "x": "micrometer"},
                 name=f"tile_{y}_{x}",
@@ -58,7 +61,7 @@ def create_overlap_tiles_scene() -> OMEZarrScene:
                 channel_names=["Brightfield"],
                 channel_colors=["FFFFFF"],
                 labels=oz_binary_ms,
-                )
+            )
 
             translation = Translation(
                 translation=(y, x),
@@ -88,7 +91,7 @@ def create_YX_to_CZYX_scene() -> OMEZarrScene:
         data=img,
         axes=["c", "z", "y", "x"],
         scale={"c": 1, "z": 1, "y": 1, "x": 1},
-        name="cells3d"
+        name="cells3d",
     )
 
     oz_ms = OMEZarrMultiscale(
@@ -96,42 +99,35 @@ def create_YX_to_CZYX_scene() -> OMEZarrScene:
     )
 
     slice_img = OMEZarrImage(
-        data=some_slice,
-        axes=["y", "x"],
-        scale={"y": 1, "x": 1},
-        name="cells3d_slice"
+        data=some_slice, axes=["y", "x"], scale={"y": 1, "x": 1}, name="cells3d_slice"
     )
 
     slice_ms = OMEZarrMultiscale(
         image=slice_img,
     )
 
-    transform_to_3d = Sequence.model_validate({
-        "type": "sequence",
-        "input": {"path": "cells3d_slice", "name": "physical"},
-        "output": {"path": "cells3d", "name": "physical"},
-        "transformations": [
-            {
-                "type": "projectAxis",
-                "createdOutputs": [0, 1]
-            },
-            {
-                "type": "translation",
-                "translation": [0, 30, 0, 0]
-            }
-        ]
-    })
+    transform_to_3d = Sequence.model_validate(
+        {
+            "type": "sequence",
+            "input": {"path": "cells3d_slice", "name": "physical"},
+            "output": {"path": "cells3d", "name": "physical"},
+            "transformations": [
+                {"type": "projectAxis", "createdOutputs": [0, 1]},
+                {"type": "translation", "translation": [0, 30, 0, 0]},
+            ],
+        }
+    )
 
     return OMEZarrScene(
-        images=[oz_ms, slice_ms],
-        coordinate_transformations=[transform_to_3d]
+        images=[oz_ms, slice_ms], coordinate_transformations=[transform_to_3d]
     )
+
 
 def create_YXto_ZYX_scene() -> OMEZarrScene:
     """
     Create a scene with a 2D image embedded in a 3D coordinate system.
     """
-    
+
     img = data.cells3d().transpose((1, 0, 2, 3))
     some_slice = img[0, 30, :, :]
 
@@ -139,7 +135,7 @@ def create_YXto_ZYX_scene() -> OMEZarrScene:
         data=img[0],
         axes=["z", "y", "x"],
         scale={"z": 1, "y": 1, "x": 1},
-        name="cells3d"
+        name="cells3d",
     )
 
     oz_ms = OMEZarrMultiscale(
@@ -147,36 +143,29 @@ def create_YXto_ZYX_scene() -> OMEZarrScene:
     )
 
     slice_img = OMEZarrImage(
-        data=some_slice,
-        axes=["y", "x"],
-        scale={"y": 1, "x": 1},
-        name="cells3d_slice"
+        data=some_slice, axes=["y", "x"], scale={"y": 1, "x": 1}, name="cells3d_slice"
     )
 
     slice_ms = OMEZarrMultiscale(
         image=slice_img,
     )
 
-    transform_to_3d = Sequence.model_validate({
-        "type": "sequence",
-        "input": {"path": "cells3d_slice", "name": "physical"},
-        "output": {"path": "cells3d", "name": "physical"},
-        "transformations": [
-            {
-                "type": "projectAxis",
-                "createdOutputs": [0]
-            },
-            {
-                "type": "translation",
-                "translation": [30, 0, 0]
-            }
-        ]
-    })
+    transform_to_3d = Sequence.model_validate(
+        {
+            "type": "sequence",
+            "input": {"path": "cells3d_slice", "name": "physical"},
+            "output": {"path": "cells3d", "name": "physical"},
+            "transformations": [
+                {"type": "projectAxis", "createdOutputs": [0]},
+                {"type": "translation", "translation": [30, 0, 0]},
+            ],
+        }
+    )
 
     return OMEZarrScene(
-        images=[oz_ms, slice_ms],
-        coordinate_transformations=[transform_to_3d]
+        images=[oz_ms, slice_ms], coordinate_transformations=[transform_to_3d]
     )
+
 
 def _count_layers_in_scene(scene: OMEZarrScene) -> int:
     """
@@ -199,21 +188,26 @@ def _count_layers_in_scene(scene: OMEZarrScene) -> int:
 
     return n_layers
 
-@pytest.mark.parametrize("scene", [
-    create_overlap_tiles_scene(),
-    create_YX_to_CZYX_scene(),
-    create_YXto_ZYX_scene(),
-    ])
+
+@pytest.mark.parametrize(
+    "scene",
+    [
+        create_overlap_tiles_scene(),
+        create_YX_to_CZYX_scene(),
+        create_YXto_ZYX_scene(),
+    ],
+)
 def test_scene_in_napari(scene, tmp_path, make_napari_viewer):
 
     scene.to_ome_zarr(str(tmp_path / "tmp_scene.ome.zarr"), overwrite=True)
-    
+
     viewer = make_napari_viewer()
     viewer.open(path=str(tmp_path / "tmp_scene.ome.zarr"), plugin="napari-ome-zarr")
 
     n_layers = _count_layers_in_scene(scene)
 
     assert len(viewer.layers) == n_layers
+
 
 if __name__ == "__main__":
     pytest.main([__file__])
