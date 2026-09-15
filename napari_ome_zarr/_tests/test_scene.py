@@ -167,26 +167,28 @@ def create_YXto_ZYX_scene() -> OMEZarrScene:
     )
 
 
-def _count_layers_in_scene(scene: OMEZarrScene) -> int:
+def _count_layers_in_scene(scene: OMEZarrScene) -> dict:
     """
     Browse the images in a scene and sum up how many layers
     should be created. One channel corresponds to one layer.
+    One label image corresponds to one layer.
     """
-    n_layers: int = 0
+    n_image_layers: int = 0
+    n_label_layers: int = 0
     for _, ms_image in scene.images.items():
         img = ms_image.images[0]
 
         if "c" in img.axes:
             ch_axis = "".join(img.axes).find("c")
             n_channels = int(img.data.shape[ch_axis])
-            n_layers += n_channels
+            n_image_layers += n_channels
         else:
-            n_layers += 1
+            n_image_layers += 1
 
         if hasattr(ms_image, "labels") and ms_image.labels is not None:
-            n_layers += len(ms_image.labels.items())
+            n_label_layers += len(ms_image.labels.items())
 
-    return n_layers
+    return {"image_layers": n_image_layers, "label_layers": n_label_layers}
 
 
 @pytest.mark.parametrize(
@@ -198,15 +200,30 @@ def _count_layers_in_scene(scene: OMEZarrScene) -> int:
     ],
 )
 def test_scene_in_napari(scene, tmp_path, make_napari_viewer):
+    from napari.layers import Image, Labels
 
     scene.to_ome_zarr(str(tmp_path / "tmp_scene.ome.zarr"), overwrite=True)
 
     viewer = make_napari_viewer()
     viewer.open(path=str(tmp_path / "tmp_scene.ome.zarr"), plugin="napari-ome-zarr")
 
+    # Check every channel and layer is accounted for
     n_layers = _count_layers_in_scene(scene)
+    assert len(viewer.layers) == n_layers["image_layers"] + n_layers["label_layers"]
 
-    assert len(viewer.layers) == n_layers
+    # Make sure we have the correct amount of labels and image layers
+    n_labels_layer_viewer = 0
+    n_image_layers_viewer = 0
+    for layer in viewer.layers:
+        if isinstance(layer, Image):
+            n_image_layers_viewer += 1
+        elif isinstance(layer, Labels):
+            n_labels_layer_viewer += 1
+
+    assert n_image_layers_viewer == n_layers["image_layers"]
+    assert n_labels_layer_viewer == n_layers["label_layers"]
+
+
 
 
 if __name__ == "__main__":
