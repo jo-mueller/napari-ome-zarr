@@ -1,7 +1,7 @@
 # zarr v3
 
 from abc import ABC
-from typing import Any, Callable, Dict, Iterable, List, Tuple
+from typing import Any, Callable, Dict, Iterable, List, Sequence, Tuple
 from xml.etree import ElementTree as ET
 
 import dask.array as da
@@ -228,7 +228,7 @@ class Spec(ABC):
     def to_layer_data(self) -> List[LayerData]:
         return []
 
-    def children(self) -> list["Spec"]:
+    def children(self) -> Sequence["Spec"]:
         return []
 
     def iter_nodes(self) -> Iterable["Spec"]:
