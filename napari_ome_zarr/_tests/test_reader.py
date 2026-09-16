@@ -351,15 +351,18 @@ def test_missing_units(tmp_path, make_napari_viewer):
 
     data = np.random.random((3, 128, 128))
 
-    oz_img = OMEZarrImage(data=data, axes="tyx",
-                          axes_units={"y": "meter", "x": "meter"},
-                          scale={"t": 1, "y": 1, "x": 1})
+    oz_img = OMEZarrImage(
+        data=data,
+        axes="tyx",
+        axes_units={"y": "meter", "x": "meter"},
+        scale={"t": 1, "y": 1, "x": 1},
+    )
     oz_ms = OMEZarrMultiscale(image=oz_img)
     oz_ms.to_ome_zarr(str(tmp_path / "test_missing_units.ome.zarr"), overwrite=True)
 
     layer = viewer.open(
-        str(tmp_path / "test_missing_units.ome.zarr"),
-        plugin="napari-ome-zarr")[0]
+        str(tmp_path / "test_missing_units.ome.zarr"), plugin="napari-ome-zarr"
+    )[0]
 
     assert layer.units == ("pixel", "meter", "meter")
 
