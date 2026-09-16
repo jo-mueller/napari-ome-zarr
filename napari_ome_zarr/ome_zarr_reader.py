@@ -514,9 +514,9 @@ class Plate(Spec):
 
         # need to add a new axis for the channel dimension
         # to account for the additional dimension added here
-        metadata["axis_labels"] = ["Unknown"] + list(metadata["axis_labels"])
         if "units" in metadata:
-            metadata["units"] = ["pixel"] + list(metadata["units"])
+            metadata["units"] = tuple(["pixel"] + list(metadata["units"]))
+        metadata["axis_labels"] = tuple(["field"] + list(metadata["axis_labels"]))
         return [(data, metadata, "image")]
 
     def children(self) -> list[Spec]:
