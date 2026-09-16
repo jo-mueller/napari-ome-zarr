@@ -274,6 +274,7 @@ class Multiscales(Spec):
 
             props = _ome_zarr_ms_to_layer_props(ms, channel_index)
             props["name"] = ms.name
+            props["blending"] = "additive"
             if channel_properties is not None:
                 props.update(channel_properties[ch_idx])
 
@@ -596,6 +597,7 @@ class Label(Multiscales):
 
             props = _ome_zarr_ms_to_layer_props(ms, channel_index)
             props["name"] = ms.name
+            props["blending"] = "additive"
 
             # Get color settings if present
             if (
