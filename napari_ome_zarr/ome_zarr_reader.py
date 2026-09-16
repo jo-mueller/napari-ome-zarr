@@ -305,7 +305,13 @@ class Bioformats2raw(Spec):
         # Don't consider "plate" as a Bioformats2raw layout
         return "bioformats2raw.layout" in attrs and "plate" not in attrs
 
-    def children(self) -> list[Spec]:
+    def to_layer_data(self) -> List[LayerData]:
+        layers: List[LayerData] = []
+        for child in self.children():
+            layers.extend(child.to_layer_data())
+        return layers
+
+    def children(self) -> list[Multiscales]:
         # lookup children from series of OME/METADATA.xml
         xml_data = SyncMixin()._sync(
             self.group.store.get(
