@@ -618,18 +618,13 @@ class Label(Multiscales):
                 and hasattr(ms.image_label, "colors")
                 and ms.image_label.colors is not None
             ):
-                colors = []
-                values = []
-                for idx in range(len(ms.image_label.colors)):
-                    val = ms.image_label.colors[idx].label_value
-                    rgba = ms.image_label.colors[idx].rgba
-                    colors.append([x / 255 for x in rgba])
-                    values.append(val)
-
-                if 0 not in values:
-                    # add default color for background (0)
-                    colors.insert(0, [0, 0, 0, 0])
-                if len(colors) > 0:
+                colors = {
+                    c.label_value: [x / 255 for x in c.rgba]
+                    for c in ms.image_label.colors
+                }
+                # default color for background (0)
+                colors.setdefault(0, [0, 0, 0, 0])
+                if colors:
                     props["colormap"] = colors
 
             if (
