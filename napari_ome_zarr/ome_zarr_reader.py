@@ -325,7 +325,7 @@ class Bioformats2raw(Spec):
             )
         )
         root = ET.fromstring(xml_data.to_bytes())
-        rv: list[Spec] = []
+        rv: list[Multiscales] = []
         for child in root:
             # {http://www.openmicroscopy.org/Schemas/OME/2016-06}Image
             node_id = child.attrib.get("ID", "")
