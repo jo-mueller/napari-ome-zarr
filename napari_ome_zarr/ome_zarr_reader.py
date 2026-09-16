@@ -509,7 +509,15 @@ class Plate(Spec):
         return Multiscales(image_group).to_layer_data()[0][1]
 
     def to_layer_data(self) -> List[LayerData]:
-        return [(self.data(), self.metadata(), "image")]
+        data = self.data()
+        metadata = self.metadata()
+
+        # need to add a new axis for the channel dimension
+        # to account for the additional dimension added here
+        metadata["axis_labels"] = ["Unknown"] + list(metadata["axis_labels"])
+        if "units" in metadata:
+            metadata["units"] = ["pixel"] + list(metadata["units"])
+        return [(data, metadata, "image")]
 
     def children(self) -> list[Spec]:
         # Plate has children If it has labels - check one Well...
