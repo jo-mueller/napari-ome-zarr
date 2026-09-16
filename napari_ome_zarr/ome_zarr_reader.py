@@ -65,7 +65,11 @@ def _ome_zarr_ms_to_layer_props(
     )
     props: Dict[str, Any] = {}
     if multiscales.images[0].axes_units:
-        props["units"] = tuple(multiscales.images[0].axes_units.values())
+        units = [
+            multiscales.images[0].axes_units.get(ax, "pixel")
+            for ax in multiscales.images[0].axes if ax != "c"
+            ]
+        props["units"] = tuple(units)
 
     props["axis_labels"] = tuple([ax for ax in multiscales.images[0].axes if ax != "c"])
     props["scale"] = scale
