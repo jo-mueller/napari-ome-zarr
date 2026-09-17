@@ -365,9 +365,3 @@ def test_missing_units(tmp_path, make_napari_viewer):
     )[0]
 
     assert layer.units == ("pixel", "meter", "meter")
-
-
-if __name__ == "__main__":
-    import pytest
-
-    pytest.main([__file__])
