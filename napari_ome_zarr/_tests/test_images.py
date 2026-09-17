@@ -3,20 +3,20 @@ import pytest
 from napari_ome_zarr._tests.conftest import count_layers_in_scene
 
 images = [
-    "https://livingobjects.ebi.ac.uk/idr/zarr/v0.3/9836842.zarr", # noqa: E501
+    "https://livingobjects.ebi.ac.uk/idr/zarr/v0.3/9836842.zarr",  # noqa: E501
     "https://livingobjects.ebi.ac.uk/idr/zarr/v0.4/idr0079A/idr0079_images.zarr",  # bf2raw # noqa: E501
-    "https://livingobjects.ebi.ac.uk/idr/zarr/v0.4/idr0044A/4007801.zarr", # noqa: E501
+    "https://livingobjects.ebi.ac.uk/idr/zarr/v0.4/idr0044A/4007801.zarr",  # noqa: E501
     "https://livingobjects.ebi.ac.uk/idr/zarr/v0.5/idr0062A/6001240_labels.zarr",  # noqa: E501
     "https://livingobjects.ebi.ac.uk/idr/zarr/v0.5/idr0066/ExpD_chicken_embryo_MIP.ome.zarr",  # noqa: E501
 ]
 
 scenes = [
-    "https://radosgw.public.os.wwu.de/rfc5-transform-test-data/cells3d_scene_2d_to_3d_tilt.zarr" # noqa: E501
+    "https://radosgw.public.os.wwu.de/rfc5-transform-test-data/cells3d_scene_2d_to_3d_tilt.zarr"  # noqa: E501
 ]
 
 plates = [
-    "https://livingobjects.ebi.ac.uk/idr/zarr/v0.5/idr0090/190129.zarr" # noqa: E501
-    ]
+    "https://livingobjects.ebi.ac.uk/idr/zarr/v0.5/idr0090/190129.zarr"  # noqa: E501
+]
 
 
 @pytest.mark.parametrize("url", images)
