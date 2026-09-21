@@ -108,7 +108,9 @@ def _resolve_target_affine(
         ch_idx = next(
             (i for i, ax in enumerate(intrinsic_cs.axes) if ax.type == "channel"), None
         )
-        return _strip_channel_from_affine(np.eye(len(intrinsic_cs.axes) + 1), ch_idx, ch_idx)
+        return _strip_channel_from_affine(
+            np.eye(len(intrinsic_cs.axes) + 1), ch_idx, ch_idx
+        )
 
     cs_by_name = {cs.name: cs for cs in ms.metadata.coordinateSystems}
     target_cs = cs_by_name.get(target_coordinate_system)
@@ -128,12 +130,18 @@ def _resolve_target_affine(
     for tf in ms.metadata.coordinateTransformations or ():
         if tf.input is None or tf.output is None:
             continue
-        if tf.input.name == intrinsic_cs.name and tf.output.name == target_coordinate_system:
+        if (
+            tf.input.name == intrinsic_cs.name
+            and tf.output.name == target_coordinate_system
+        ):
             tnd_tf = _ozmp_tf_to_tnd(tf, source_cs=intrinsic_cs, target_cs=target_cs)
             # wrapping in a TransformSequence gives us .simplify() whether tnd_tf is one already or not
             matrix = tnd.TransformSequence([tnd_tf]).simplify().to_affine().matrix
             return _strip_channel_from_affine(matrix, input_ch_idx, output_ch_idx)
-        if tf.output.name == intrinsic_cs.name and tf.input.name == target_coordinate_system:
+        if (
+            tf.output.name == intrinsic_cs.name
+            and tf.input.name == target_coordinate_system
+        ):
             tnd_tf = _ozmp_tf_to_tnd(tf, source_cs=target_cs, target_cs=intrinsic_cs)
             inverse = tnd_tf.invert()
             if inverse is None:

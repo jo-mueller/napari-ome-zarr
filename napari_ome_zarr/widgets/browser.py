@@ -7,7 +7,7 @@ from typing import Any
 import napari
 import zarr
 from magicgui import magicgui
-from magicgui.widgets import Container, ComboBox, Label
+from magicgui.widgets import ComboBox, Container, Label
 from napari.utils.notifications import show_error
 from ome_zarr import OMEZarrMultiscale
 
@@ -119,4 +119,3 @@ class OMEZarrBrowser(Container):
             add_method = getattr(self._viewer, f"add_{layer_type}")
             layer = add_method(data, **props)
             self._managed_layers.append(layer)
-
