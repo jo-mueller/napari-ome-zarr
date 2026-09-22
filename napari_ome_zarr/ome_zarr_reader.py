@@ -342,14 +342,6 @@ class Bioformats2raw(Spec):
             yield from child.iter_nodes()
 
 
-def cs_path_name(in_out: dict) -> str:
-    # helper to get [path/]name from 'input' or 'output' dict
-    name = in_out["name"]
-    if "path" in in_out:
-        name = in_out["path"] + "/" + name
-    return name
-
-
 class Scene(Spec):
     @staticmethod
     def matches(group: Group) -> bool:
