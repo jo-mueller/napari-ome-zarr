@@ -603,6 +603,7 @@ class Label(Multiscales):
             props = _ome_zarr_ms_to_layer_props(ms, channel_index)
             props["name"] = ms.name
             props["blending"] = "additive"
+            props["visible"] = False
 
             # Get color settings if present
             if (
