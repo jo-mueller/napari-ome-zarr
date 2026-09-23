@@ -427,7 +427,9 @@ class Scene(Spec):
                     if output_cs_obj.axes[i].type == "space"
                 ]
 
-                # Insert singleton dimensions in layer data and update props
+                # Insert singleton dimensions in layer data and update props.
+                # TODO: Currently, we assume that labels share the image's spatial
+                # scale/units. This MAY not hold in the future.
                 for idx, lyr in enumerate(_layers):
                     layer_data = lyr[0]
                     layer_props = lyr[1]
