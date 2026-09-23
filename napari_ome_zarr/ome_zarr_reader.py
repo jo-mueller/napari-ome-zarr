@@ -373,13 +373,11 @@ class Scene(Spec):
                 seq = scene._graph.get_sequence(
                     input_coordinate_system, target_coordinate_system, full=True
                 )
-                affine = seq.simplify().to_affine().matrix
             else:
                 # Identity affine if no transformation is needed
                 seq = tnd.TransformSequence(
                     transforms=[tnd.transforms.Identity(ndim=len(input_cs_obj.axes))]
                 )
-                affine = np.eye(len(input_cs_obj.axes) + 1)
 
             # Expand data if output has more spatial dims than input
             input_spatial = [
@@ -401,18 +399,34 @@ class Scene(Spec):
                 else None
             )
 
-            # ProjectAxis is the only transform that changes dimensionality; a
-            # plain to_affine() on the composed sequence can't represent that
-            # shape change, so route through the expansion helper whenever it's
-            # present - regardless of whether it created spatial dims, a
-            # channel dim, or both (fixes non-square affine when the input has
-            # no channel axis but the output does).
-            transforms = seq.flatten()
-            project_tf = next(
-                (tf for tf in transforms if isinstance(tf, tnd.transforms.ProjectAxis)),
-                None,
-            )
-            if project_tf is not None:
+            # Check whether  the transformation can be represented
+            # as an affine matrix
+            affine_obj = seq.simplify().to_affine()
+
+            if affine_obj is None:
+                raise ValueError(
+                    "Affine transformation could not be computed."
+                    f"for transform sequence {seq}"
+                    )
+
+            # ProjectAxis is the only transform that changes dimensionality;
+            # If an affine matrix is non-square, a projectAxis transform
+            # must exist in the transform sequence. The projectAxis transform is handled
+            # here by broadcasting the array to match the output dimensionality.
+            # Hence, we need to identify the ProjectAxis transform and expand the
+            # affine matrices in the sequence accordingly.
+            project_tf = None
+            if affine_obj.matrix.shape[0] == affine_obj.matrix.shape[1]:
+                affine = affine_obj.matrix
+            else:
+                project_tf = next(
+                    (
+                        tf
+                        for tf in seq.flatten()
+                        if isinstance(tf, tnd.transforms.ProjectAxis)
+                    ),
+                    None,
+                )
                 affine = _expand_affine_for_projection(seq)
 
             n_extra = len(output_spatial) - len(input_spatial)
