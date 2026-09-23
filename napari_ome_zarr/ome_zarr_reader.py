@@ -499,7 +499,10 @@ class Plate(Spec):
         if "units" in metadata:
             metadata["units"] = tuple(["pixel"] + list(metadata["units"]))
         metadata["axis_labels"] = tuple(["field"] + list(metadata["axis_labels"]))
-        return [(data, metadata, "image")]
+        layers: List[LayerData] = [(data, metadata, "image")]
+        for child in self.children():
+             layers.extend(child.to_layer_data())
+        return layers
 
     def children(self) -> list[Spec]:
         # Plate has children If it has labels - check one Well...
