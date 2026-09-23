@@ -559,6 +559,12 @@ class Labels(Spec):
     def matches(group: Group) -> bool:
         return "labels" in Spec.get_attrs(group)
 
+    def to_layer_data(self) -> List[LayerData]:
+        layers: List[LayerData] = []
+        for node in self.iter_nodes():
+            layers.extend(node.to_layer_data())
+        return layers
+
     # override to NOT yield self since node has no data
     def iter_nodes(self) -> Iterable[Spec]:
         attrs = Spec.get_attrs(self.group)
