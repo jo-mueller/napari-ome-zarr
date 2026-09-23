@@ -292,17 +292,6 @@ class Multiscales(Spec):
 
         return layers
 
-    def _splits_channels(self) -> bool:
-        """Whether a channel axis is turned into separate napari layers.
-
-        Images split into one layer per channel via ``channel_axis``, so the
-        channel axis is dropped from the per-axis metadata (axis_labels, units,
-        scale, translate) to match each split layer's reduced ndim. Labels keep
-        every axis in a single layer and so must keep the channel axis (see
-        ``Label._splits_channels``).
-        """
-        return True
-
 
 class Bioformats2raw(Spec):
     @staticmethod
@@ -636,12 +625,6 @@ class Label(Multiscales):
             labels_layers.append((data, props, "labels"))
 
         return labels_layers
-
-    def _splits_channels(self) -> bool:
-        # A label is loaded as a single layer keeping all axes (no per-channel
-        # split), so the channel axis must be retained in the per-axis metadata
-        # to match the layer ndim.
-        return False
 
 
 def read_ome_zarr(root_group: Group) -> Callable:
