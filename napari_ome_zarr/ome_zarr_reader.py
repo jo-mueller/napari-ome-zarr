@@ -517,7 +517,7 @@ class Plate(Spec):
         metadata["axis_labels"] = tuple(["field"] + list(metadata["axis_labels"]))
         layers: List[LayerData] = [(data, metadata, "image")]
         for child in self.children():
-             layers.extend(child.to_layer_data())
+            layers.extend(child.to_layer_data())
         return layers
 
     def children(self) -> list[Spec]:
