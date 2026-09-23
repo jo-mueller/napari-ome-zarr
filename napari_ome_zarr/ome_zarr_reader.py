@@ -407,7 +407,7 @@ class Scene(Spec):
                 raise ValueError(
                     "Affine transformation could not be computed."
                     f"for transform sequence {seq}"
-                    )
+                )
 
             # ProjectAxis is the only transform that changes dimensionality;
             # If an affine matrix is non-square, a projectAxis transform
