@@ -344,7 +344,7 @@ class Scene(Spec):
         scene = OMEZarrScene.from_ome_zarr(self.group)
         all_cs = scene.get_coordinate_system()
 
-        if all_cs:
+        if all_cs and target_coordinate_system is None:
             # Get first coordinate system (sorted for determinism)
             first_cs_key = next(iter(sorted(all_cs.keys())))
             target_coordinate_system = first_cs_key
