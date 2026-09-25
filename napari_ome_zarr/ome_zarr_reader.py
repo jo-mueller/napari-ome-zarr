@@ -259,9 +259,9 @@ class Multiscales(Spec):
 
         data = [img.data for img in ms.images]
 
-        has_channel = "c" in ms.images[0].axes
+        has_channel = "channel" in [ax.type for ax in ms.images[0].axes]
         if has_channel:
-            channel_index = ms.images[0].axes.index("c")
+            channel_index = [ax.type for ax in ms.images[0].axes].index("channel")
             n_channels = int(ms.images[0].data.shape[channel_index])
         else:
             channel_index = None
@@ -602,9 +602,14 @@ class Label(Multiscales):
 
         ms = OMEZarrLabels.from_ome_zarr(self.group)
 
-        has_channel = "c" in ms.images[0].axes
-        channel_index = ms.images[0].axes.index("c") if has_channel else None
-        n_channels = ms.images[0].data.shape[channel_index] if has_channel else 1
+        has_channel = "channel" in [ax.type for ax in ms.images[0].axes] 
+
+        if has_channel:
+            channel_index = [ax.type for ax in ms.images[0].axes].index("channel")
+            n_channels = ms.images[0].data.shape[channel_index]
+        else:
+            channel_index = None
+            n_channels = 1
 
         labels_layers: List[LayerData] = []
         for ch_idx in range(n_channels):
