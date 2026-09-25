@@ -29,6 +29,10 @@ AXES_5D = [
     {"name": "x", "type": "space"},
 ]
 
+DEFAULT_SCALE = 1.0
+DEFAULT_UNIT = "pixel"
+DEFAULT_AXIS_LABEL = "Unknown"
+
 
 def _match_colors_to_available_colormap(custom_cmap: Colormap) -> Colormap:
     """Helper function to match Colormap to an existing napari Colormap.
@@ -47,15 +51,17 @@ def _match_colors_to_available_colormap(custom_cmap: Colormap) -> Colormap:
     return custom_cmap
 
 
-def _ome_zarr_ms_to_layer_props(
+def _ome_zarr_multiscales_to_layer_props(
     multiscales: OMEZarrMultiscale | OMEZarrLabels,
     channel_index: int | None,
-    inserted_defaults: list[dict[str, Any]] | None = None,
 ) -> Dict[str, Any]:
     """
     Helper function to extract properties from an OME-Zarr
-    multiscale or label images that would apply to all channels
-    (if present) alike.
+    multiscale that can be forwarded to a napari layer,
+    irrespective of whether this layer is a image or labels layer.
+
+    The channel dimension is omitted because it is split into
+    different layers.
     """
 
     # get scale (same for all channels)
@@ -75,19 +81,6 @@ def _ome_zarr_ms_to_layer_props(
     props["axis_labels"] = tuple([ax for ax in multiscales.images[0].axes if ax != "c"])
     props["scale"] = scale
     props["name"] = multiscales.name
-
-    if inserted_defaults is not None:
-        for item in inserted_defaults:
-            if "scale" in item and "scale" in props:
-                scale.insert(item["index"], item["scale"])
-            if "axis_labels" in item and "axis_labels" in props:
-                axis_labels = list(props["axis_labels"])
-                axis_labels.insert(item["index"], item["axis_labels"])
-                props["axis_labels"] = tuple(axis_labels)
-            if "units" in item and "units" in props:
-                units = list(props["units"])
-                units.insert(item["index"], item["units"])
-                props["units"] = tuple(units)
 
     return props
 
@@ -277,7 +270,7 @@ class Multiscales(Spec):
                 else [img.data for img in ms.images]
             )
 
-            props = _ome_zarr_ms_to_layer_props(ms, channel_index)
+            props = _ome_zarr_multiscales_to_layer_props(ms, channel_index)
             props["name"] = ms.name
             props["blending"] = "additive"
             if channel_properties is not None:
@@ -447,19 +440,22 @@ class Scene(Spec):
                 for idx, lyr in enumerate(_layers):
                     layer_data = lyr[0]
                     layer_props = lyr[1]
-                    updated_props = _ome_zarr_ms_to_layer_props(
-                        ms,
-                        input_ch_index,
-                        inserted_defaults=[
-                            {
-                                "index": i,
-                                "scale": 1.0,
-                                "axis_labels": "Unknown",
-                                "units": None,
-                            }
-                            for i in created_output_idxs
-                        ],
+                    updated_props = _ome_zarr_multiscales_to_layer_props(
+                        ms, input_ch_index
                     )
+                    # created dims have no real scale/axis label/unit - fill in
+                    # placeholders at their position in the output CS
+                    for i in created_output_idxs:
+                        if "scale" in updated_props:
+                            updated_props["scale"].insert(i, DEFAULT_SCALE)
+                        if "axis_labels" in updated_props:
+                            axis_labels = list(updated_props["axis_labels"])
+                            axis_labels.insert(i, DEFAULT_AXIS_LABEL)
+                            updated_props["axis_labels"] = tuple(axis_labels)
+                        if "units" in updated_props:
+                            units = list(updated_props["units"])
+                            units.insert(i, DEFAULT_UNIT)
+                            updated_props["units"] = tuple(units)
 
                     # update all properties except name (keep original name)
                     layer_props |= {
@@ -619,7 +615,7 @@ class Label(Multiscales):
                 else [img.data for img in ms.images]
             )
 
-            props = _ome_zarr_ms_to_layer_props(ms, channel_index)
+            props = _ome_zarr_multiscales_to_layer_props(ms, channel_index)
             props["name"] = ms.name
             props["blending"] = "additive"
             props["visible"] = False
