@@ -440,26 +440,26 @@ class Scene(Spec):
                 for idx, lyr in enumerate(_layers):
                     layer_data = lyr[0]
                     layer_props = lyr[1]
-                    updated_props = _ome_zarr_multiscales_to_layer_props(
+                    updated_properties = _ome_zarr_multiscales_to_layer_props(
                         ms, input_ch_index
                     )
                     # created dims have no real scale/axis label/unit - fill in
                     # placeholders at their position in the output CS
                     for i in created_output_idxs:
-                        if "scale" in updated_props:
-                            updated_props["scale"].insert(i, DEFAULT_SCALE)
-                        if "axis_labels" in updated_props:
-                            axis_labels = list(updated_props["axis_labels"])
+                        if "scale" in updated_properties:
+                            updated_properties["scale"].insert(i, DEFAULT_SCALE)
+                        if "axis_labels" in updated_properties:
+                            axis_labels = list(updated_properties["axis_labels"])
                             axis_labels.insert(i, DEFAULT_AXIS_LABEL)
-                            updated_props["axis_labels"] = tuple(axis_labels)
-                        if "units" in updated_props:
-                            units = list(updated_props["units"])
+                            updated_properties["axis_labels"] = tuple(axis_labels)
+                        if "units" in updated_properties:
+                            units = list(updated_properties["units"])
                             units.insert(i, DEFAULT_UNIT)
-                            updated_props["units"] = tuple(units)
+                            updated_properties["units"] = tuple(units)
 
                     # update all properties except name (keep original name)
                     layer_props |= {
-                        k: v for k, v in updated_props.items() if k != "name"
+                        k: v for k, v in updated_properties.items() if k != "name"
                     }
 
                     for out_idx in created_output_idxs:
