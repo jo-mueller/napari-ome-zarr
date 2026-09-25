@@ -662,8 +662,6 @@ def read_ome_zarr(root_group: Group) -> Callable:
     def f(*args: Any, **kwargs: Any) -> List[LayerData]:
         layers: List[LayerData] = list()
 
-        print("Root group", root_group.attrs.asdict())
-
         spec: Spec | None = None
 
         if Labels.matches(root_group):
