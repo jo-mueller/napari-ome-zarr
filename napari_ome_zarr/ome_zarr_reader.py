@@ -598,7 +598,7 @@ class Label(Multiscales):
 
         ms = OMEZarrLabels.from_ome_zarr(self.group)
 
-        has_channel = "channel" in [ax.type for ax in ms.images[0].axes] 
+        has_channel = "channel" in [ax.type for ax in ms.images[0].axes]
 
         if has_channel:
             channel_index = [ax.type for ax in ms.images[0].axes].index("channel")
